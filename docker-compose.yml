@@ -1,0 +1,10 @@
+services:
+  headscale-gui:
+    image: ghcr.io/YOUR_GITHUB_USERNAME/headscale-gui:latest
+    ports:
+      - "8080:80"
+    environment:
+      # Set this to your headscale server URL.
+      # The container will proxy /api/v1/ calls to it — no CORS config needed.
+      - HEADSCALE_URL=https://headscale.example.com
+    restart: unless-stopped

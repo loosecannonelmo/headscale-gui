@@ -1,0 +1,72 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: headscale-gui
+  namespace: default
+  labels:
+    app: headscale-gui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: headscale-gui
+  template:
+    metadata:
+      labels:
+        app: headscale-gui
+    spec:
+      containers:
+        - name: headscale-gui
+          image: ghcr.io/YOUR_GITHUB_USERNAME/headscale-gui:latest
+          ports:
+            - containerPort: 80
+          env:
+            - name: HEADSCALE_URL
+              value: "https://headscale.kottmanfamily.com"
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: headscale-gui
+  namespace: default
+spec:
+  selector:
+    app: headscale-gui
+  ports:
+    - port: 80
+      targetPort: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: headscale-gui
+  namespace: default
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+    traefik.ingress.kubernetes.io/router.middlewares: default-redirect-https@kubernetescrd
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: headscale-gui.kottmanfamily.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: headscale-gui
+                port:
+                  number: 80
+  tls:
+    - hosts:
+        - headscale-gui.kottmanfamily.com
+      secretName: headscale-gui-tls
