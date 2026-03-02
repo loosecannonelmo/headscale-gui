@@ -1,4 +1,4 @@
-REGISTRY  ?= ghcr.io/YOUR_GITHUB_USERNAME
+REGISTRY  ?= ghcr.io/loosecannonelmo
 IMAGE     := headscale-gui
 TAG       ?= latest
 FULL_IMAGE = $(REGISTRY)/$(IMAGE):$(TAG)

@@ -24,7 +24,7 @@ docker run -d \
   --name headscale-gui \
   -p 8080:80 \
   -e HEADSCALE_URL=https://headscale.example.com \
-  ghcr.io/YOUR_GITHUB_USERNAME/headscale-gui:latest
+  ghcr.io/loosecannonelmo/headscale-gui:latest
 ```
 
 Then open **http://localhost:8080** and enter your headscale API key.
@@ -45,7 +45,7 @@ kubectl exec -n default deployment/headscale -- headscale apikeys create --expir
 ```yaml
 services:
   headscale-gui:
-    image: ghcr.io/YOUR_GITHUB_USERNAME/headscale-gui:latest
+    image: ghcr.io/loosecannonelmo/headscale-gui:latest
     ports:
       - "8080:80"
     environment:
@@ -58,7 +58,7 @@ services:
 See [`k8s/headscale-gui.yaml`](k8s/headscale-gui.yaml) for a ready-to-use manifest.
 
 1. Edit the `HEADSCALE_URL` value and the `host` in the Ingress to match your setup
-2. Replace `YOUR_GITHUB_USERNAME` with the actual image path
+2. Replace `loosecannonelmo` with the actual image path
 3. Apply:
    ```bash
    kubectl apply -f k8s/headscale-gui.yaml

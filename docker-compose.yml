@@ -1,6 +1,6 @@
 services:
   headscale-gui:
-    image: ghcr.io/YOUR_GITHUB_USERNAME/headscale-gui:latest
+    image: ghcr.io/loosecannonelmo/headscale-gui:latest
     ports:
       - "8080:80"
     environment:
