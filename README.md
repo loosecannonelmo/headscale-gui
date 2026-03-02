@@ -19,6 +19,8 @@ A modern web interface for [headscale](https://github.com/juanfont/headscale), t
 
 The easiest way to run headscale-gui. The container proxies API calls to your headscale server, so no CORS configuration is required.
 
+> **Replace `https://headscale.example.com`** with the actual URL of your headscale server.
+
 ```bash
 docker run -d \
   --name headscale-gui \

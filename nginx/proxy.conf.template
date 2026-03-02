@@ -1,3 +1,9 @@
+# Use Docker's embedded DNS so nginx resolves upstream hostnames at request
+# time rather than at startup. Without this, nginx crashes on boot if the
+# HEADSCALE_URL hostname can't be resolved immediately (e.g. bad URL, slow
+# DNS, or headscale temporarily down).
+resolver 127.0.0.11 valid=30s ipv6=off;
+
 server {
     listen 80;
     root /usr/share/nginx/html;
@@ -5,7 +11,10 @@ server {
 
     # Proxy all headscale API calls — avoids any CORS requirements
     location /api/v1/ {
-        proxy_pass ${HEADSCALE_URL}/api/v1/;
+        # Assigning to a variable forces per-request DNS resolution (see resolver above).
+        # With a static proxy_pass nginx resolves once at startup and crashes if it fails.
+        set $upstream "${HEADSCALE_URL}";
+        proxy_pass $upstream;
         proxy_http_version 1.1;
         proxy_set_header Host $proxy_host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -15,7 +24,6 @@ server {
         # Without this, Traefik/nginx upstreams reject the handshake with
         # "unrecognized name" when the domain resolves to a bare IP.
         proxy_ssl_server_name on;
-        # Forward the Authorization header from the browser
         proxy_pass_request_headers on;
     }
 
