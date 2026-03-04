@@ -23,7 +23,7 @@ spec:
             - containerPort: 80
           env:
             - name: HEADSCALE_URL
-              value: "https://headscale.kottmanfamily.com"
+              value: "https://headscale.example.com"  # Replace with your headscale URL
           resources:
             requests:
               cpu: 10m
@@ -56,7 +56,7 @@ metadata:
 spec:
   ingressClassName: traefik
   rules:
-    - host: headscale-gui.kottmanfamily.com
+    - host: headscale-gui.example.com
       http:
         paths:
           - path: /
@@ -68,5 +68,5 @@ spec:
                   number: 80
   tls:
     - hosts:
-        - headscale-gui.kottmanfamily.com
+        - headscale-gui.example.com
       secretName: headscale-gui-tls

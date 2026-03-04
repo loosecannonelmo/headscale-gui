@@ -27,7 +27,7 @@ push: build
 .PHONY: run
 run:
 	docker run --rm -p 8080:80 \
-		-e HEADSCALE_URL=https://headscale.kottmanfamily.com \
+		-e HEADSCALE_URL=https://headscale.example.com \
 		$(FULL_IMAGE)
 
 # ── Kubernetes ────────────────────────────────────────────────────────────────
