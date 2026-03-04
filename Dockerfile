@@ -1,5 +1,9 @@
 # ── Stage 1: Build ───────────────────────────────────────────────────────────
-FROM node:22-alpine AS builder
+# $BUILDPLATFORM is always the native runner platform (linux/amd64).
+# This means Node runs natively regardless of the target platform, so
+# QEMU emulation is never needed for the slow build step. The output
+# (JS/CSS/HTML) is architecture-independent and works on any platform.
+FROM --platform=$BUILDPLATFORM node:22-alpine AS builder
 
 WORKDIR /app
 COPY package*.json ./
