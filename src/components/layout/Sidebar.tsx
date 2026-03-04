@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import {
-  LayoutDashboard, Monitor, Route, Users, Key, Shield, Server,
+  LayoutDashboard, Monitor, Route, Users, Key, Shield,
   Settings, ChevronLeft, ChevronRight, Wifi, WifiOff, Loader2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -17,7 +17,6 @@ const navItems = [
   { to: '/keys', label: 'Pre-Auth Keys', icon: Key },
   { type: 'section', label: 'Policy' },
   { to: '/acl', label: 'ACL Editor', icon: Shield },
-  { to: '/dns', label: 'DNS', icon: Server },
   { type: 'section', label: 'System' },
   { to: '/apikeys', label: 'API Keys', icon: Key },
   { to: '/settings', label: 'Settings', icon: Settings },
