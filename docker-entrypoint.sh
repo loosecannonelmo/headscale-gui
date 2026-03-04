@@ -7,10 +7,16 @@ HEADSCALE_URL="${HEADSCALE_URL%/}"
 if [ -n "$HEADSCALE_URL" ]; then
     echo "Proxy mode: forwarding /api/v1/ → $HEADSCALE_URL/api/v1/"
 
-    # Substitute HEADSCALE_URL into the nginx config template
-    # The '${HEADSCALE_URL}' argument restricts envsubst to only that variable,
-    # leaving nginx's own $variables (like $remote_addr) untouched.
-    envsubst '${HEADSCALE_URL}' \
+    # Read the DNS resolver from /etc/resolv.conf so this works in both
+    # Docker (127.0.0.11) and Kubernetes (CoreDNS ClusterIP, e.g. 10.43.0.10).
+    RESOLVER=$(grep -m1 nameserver /etc/resolv.conf | awk '{print $2}')
+    echo "DNS resolver: $RESOLVER"
+    export RESOLVER
+
+    # Substitute HEADSCALE_URL and RESOLVER into the nginx config template.
+    # Listing variables explicitly prevents envsubst from touching nginx's
+    # own $variables (like $remote_addr, $proxy_host, etc.).
+    envsubst '${HEADSCALE_URL} ${RESOLVER}' \
         < /etc/nginx/headscale-gui/proxy.conf.template \
         > /etc/nginx/conf.d/default.conf
 

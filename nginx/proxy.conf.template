@@ -1,8 +1,8 @@
-# Use Docker's embedded DNS so nginx resolves upstream hostnames at request
-# time rather than at startup. Without this, nginx crashes on boot if the
-# HEADSCALE_URL hostname can't be resolved immediately (e.g. bad URL, slow
-# DNS, or headscale temporarily down).
-resolver 127.0.0.11 valid=30s ipv6=off;
+# Resolver is injected at container startup from /etc/resolv.conf so this
+# works in both Docker (127.0.0.11) and Kubernetes (CoreDNS ClusterIP).
+# Using a variable in proxy_pass forces per-request DNS resolution instead
+# of resolving once at startup (which would crash nginx if DNS fails).
+resolver ${RESOLVER} valid=30s ipv6=off;
 
 server {
     listen 80;
