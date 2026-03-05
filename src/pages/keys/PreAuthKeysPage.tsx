@@ -547,8 +547,8 @@ export function PreAuthKeysPage() {
   } = useQuery({
     queryKey: ['preauth-keys', userNames],
     queryFn: async () => {
-      const results = await Promise.all(userNames.map(u => preAuthKeysApi.listForUser(u)))
-      return results.flatMap(r => r.preAuthKeys)
+      const results = await Promise.allSettled(userNames.map(u => preAuthKeysApi.listForUser(u)))
+      return results.flatMap(r => r.status === 'fulfilled' ? r.value.preAuthKeys : [])
     },
     enabled: userNames.length > 0,
     refetchInterval: 30_000,
@@ -845,7 +845,7 @@ export function PreAuthKeysPage() {
         open={expireTarget !== null}
         onClose={() => setExpireTarget(null)}
         onConfirm={() => {
-          if (expireTarget) expireMutation.mutate({ user: expireTarget.user.name, key: expireTarget.key })
+          if (expireTarget) expireMutation.mutate({ user: expireTarget.user.id, key: expireTarget.key })
         }}
         title="Expire pre-auth key?"
         description={`This key will immediately become invalid and cannot be used to register new nodes. This action cannot be undone.`}
@@ -859,7 +859,7 @@ export function PreAuthKeysPage() {
         open={deleteTarget !== null}
         onClose={() => setDeleteTarget(null)}
         onConfirm={() => {
-          if (deleteTarget) deleteMutation.mutate({ user: deleteTarget.user.name, key: deleteTarget.key })
+          if (deleteTarget) deleteMutation.mutate({ user: deleteTarget.user.id, key: deleteTarget.key })
         }}
         title="Delete pre-auth key?"
         description={`The key ${truncateKey(deleteTarget?.key ?? '', 16)} will be permanently removed.`}

@@ -153,7 +153,16 @@ export function ApiKeysPage() {
       toast.success('API key deleted')
       setConfirmDelete(null)
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => {
+      // "record not found" means headscale already cleaned up the expired key — treat as deleted
+      if (e.message.toLowerCase().includes('record not found')) {
+        queryClient.invalidateQueries({ queryKey: ['api-keys'] })
+        toast.success('API key removed')
+        setConfirmDelete(null)
+      } else {
+        toast.error(`Failed to delete key: ${e.message}`)
+      }
+    },
   })
 
   const apiKeys = data?.apiKeys ?? []
