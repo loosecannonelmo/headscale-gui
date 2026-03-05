@@ -87,7 +87,7 @@ export function DashboardPage() {
         <MetricCard
           icon={Key}
           label="Active Keys"
-          value={activeKeys || null}
+          value={allKeys !== undefined ? activeKeys : null}
           to="/keys"
           color="amber"
         />
