@@ -37,8 +37,8 @@ export function DashboardPage() {
   const { data: allKeys } = useQuery({
     queryKey: ['all-preauth-keys', userNames],
     queryFn: async () => {
-      const results = await Promise.all(userNames.map(u => preAuthKeysApi.listForUser(u)))
-      return results.flatMap(r => r.preAuthKeys)
+      const results = await Promise.allSettled(userNames.map(u => preAuthKeysApi.listForUser(u)))
+      return results.flatMap(r => r.status === 'fulfilled' ? r.value.preAuthKeys : [])
     },
     enabled: userNames.length > 0,
     refetchInterval: 60_000,

@@ -10,7 +10,7 @@ import {
 
 import { preAuthKeysApi, getPreAuthKeyStatus } from '@/api/keys'
 import { usersApi } from '@/api/users'
-import type { HeadscalePreAuthKey, CreatePreAuthKeyRequest } from '@/api/types'
+import type { HeadscalePreAuthKey, HeadscaleUser, CreatePreAuthKeyRequest } from '@/api/types'
 
 import { PageHeader } from '@/components/layout/TopBar'
 import { KeyStatusBadge, Badge } from '@/components/shared/StatusBadge'
@@ -200,12 +200,12 @@ function CreateKeyPanel({
   onClose,
   onCreated,
 }: {
-  users: string[]
+  users: HeadscaleUser[]
   onClose: () => void
   onCreated: (key: string) => void
 }) {
   const [form, setForm] = useState<CreateFormState>({
-    user: users[0] ?? '',
+    user: users[0]?.id ?? '',
     reusable: false,
     ephemeral: false,
     expiryPreset: '90d',
@@ -339,7 +339,7 @@ function CreateKeyPanel({
                     <option value="">No users available</option>
                   )}
                   {users.map(u => (
-                    <option key={u} value={u}>{u}</option>
+                    <option key={u.id} value={u.id}>{u.name}</option>
                   ))}
                 </select>
                 <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none" />
@@ -824,7 +824,7 @@ export function PreAuthKeysPage() {
       {/* Create panel */}
       {panelOpen && (
         <CreateKeyPanel
-          users={userNames}
+          users={users}
           onClose={() => setPanelOpen(false)}
           onCreated={(key) => {
             setRevealKey(key)
