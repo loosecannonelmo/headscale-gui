@@ -4,16 +4,17 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient, useQueries } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
-import { Users, Plus, Pencil, Trash2, X, Check, Loader2 } from 'lucide-react'
+import { Users, Plus, Pencil, Trash2, X, Check, Loader2, LayoutGrid, LayoutList } from 'lucide-react'
 
 import { usersApi, validateUsername } from '@/api/users'
 import { nodesApi } from '@/api/nodes'
 import { policyApi } from '@/api/policy'
 import type { HeadscaleUser } from '@/api/types'
+import { useUIStore } from '@/stores/ui'
 import { PageHeader } from '@/components/layout/TopBar'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
-import { Skeleton } from '@/components/shared/SkeletonRow'
+import { Skeleton, SkeletonRow } from '@/components/shared/SkeletonRow'
 import { cn, formatRelativeTime } from '@/lib/utils'
 
 // ── Avatar color palette ────────────────────────────────────────────────────
@@ -76,7 +77,6 @@ function CreateUserModal({ open, onClose }: CreateUserModalProps) {
   useEffect(() => {
     if (open) {
       setName('')
-      // Defer focus until after the modal renders
       setTimeout(() => inputRef.current?.focus(), 50)
     }
   }, [open])
@@ -100,15 +100,11 @@ function CreateUserModal({ open, onClose }: CreateUserModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Backdrop */}
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={handleClose} />
-
-      {/* Panel */}
       <div
         className="relative z-10 w-full max-w-md mx-4 bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-xl shadow-2xl"
         style={{ animation: 'fade-in 0.15s ease-out' }}
       >
-        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--color-border)]">
           <h2 className="text-base font-semibold text-[var(--color-text-primary)]">New User</h2>
           <button
@@ -120,7 +116,6 @@ function CreateUserModal({ open, onClose }: CreateUserModalProps) {
           </button>
         </div>
 
-        {/* Body */}
         <form onSubmit={handleSubmit} className="px-6 py-5">
           <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1.5">
             Username
@@ -142,7 +137,6 @@ function CreateUserModal({ open, onClose }: CreateUserModalProps) {
             Letters, numbers, dots, hyphens, underscores, and @ are allowed.
           </p>
 
-          {/* Footer */}
           <div className="flex items-center justify-end gap-3 mt-6">
             <button
               type="button"
@@ -191,7 +185,6 @@ function RenameField({ user, onDone }: RenameFieldProps) {
       queryClient.invalidateQueries({ queryKey: ['users'] })
       queryClient.invalidateQueries({ queryKey: ['nodes'] })
       onDone()
-      // Advisory ACL check — non-blocking
       try {
         const policy = await policyApi.get()
         if (policy.policy.includes(user.name)) {
@@ -239,7 +232,7 @@ function RenameField({ user, onDone }: RenameFieldProps) {
           onBlur={commit}
           disabled={mutation.isPending}
           className={cn(
-            'flex-1 min-w-0 px-2 py-1 text-base font-semibold rounded-md bg-[var(--color-bg-base)] border',
+            'flex-1 min-w-0 px-2 py-1 text-sm font-semibold rounded-md bg-[var(--color-bg-base)] border',
             'text-[var(--color-text-primary)] focus:outline-none transition-colors',
             error ? 'border-red-400/60' : 'border-[var(--color-accent)]',
           )}
@@ -264,15 +257,17 @@ function RenameField({ user, onDone }: RenameFieldProps) {
   )
 }
 
-// ── User Card ───────────────────────────────────────────────────────────────
+// ── Shared props ─────────────────────────────────────────────────────────────
 
-interface UserCardProps {
+interface UserItemProps {
   user: HeadscaleUser
   nodeCount: number
   nodeCountLoading: boolean
 }
 
-function UserCard({ user, nodeCount, nodeCountLoading }: UserCardProps) {
+// ── User Card (grid view) ───────────────────────────────────────────────────
+
+function UserCard({ user, nodeCount, nodeCountLoading }: UserItemProps) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [renaming, setRenaming] = useState(false)
@@ -327,7 +322,6 @@ function UserCard({ user, nodeCount, nodeCountLoading }: UserCardProps) {
       >
         {/* Top row: avatar + actions */}
         <div className="flex items-start justify-between gap-3">
-          {/* Avatar */}
           <div
             className={cn(
               'w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0',
@@ -338,7 +332,6 @@ function UserCard({ user, nodeCount, nodeCountLoading }: UserCardProps) {
             {initial}
           </div>
 
-          {/* Action buttons */}
           <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
             <button
               onClick={handleRenameClick}
@@ -363,7 +356,7 @@ function UserCard({ user, nodeCount, nodeCountLoading }: UserCardProps) {
           </div>
         </div>
 
-        {/* Name row — either static label or rename input */}
+        {/* Name row */}
         <div className="min-w-0">
           {renaming ? (
             <RenameField user={user} onDone={() => setRenaming(false)} />
@@ -412,6 +405,122 @@ function UserCard({ user, nodeCount, nodeCountLoading }: UserCardProps) {
   )
 }
 
+// ── User Table Row (table view) ──────────────────────────────────────────────
+
+function UserTableRow({ user, nodeCount, nodeCountLoading }: UserItemProps) {
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const [renaming, setRenaming] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+
+  const colors = avatarColors(user.name)
+  const initial = (user.displayName || user.name).charAt(0).toUpperCase()
+
+  const deleteMutation = useMutation({
+    mutationFn: () => usersApi.delete(user.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] })
+      queryClient.invalidateQueries({ queryKey: ['nodes'] })
+      toast.success(`User "${user.name}" deleted`)
+    },
+    onError: (err: Error) => {
+      toast.error(err.message ?? 'Delete failed')
+    },
+  })
+
+  return (
+    <>
+      <tr
+        onClick={() => { if (!renaming) navigate(`/users/${user.id}`) }}
+        className={cn(
+          'border-b border-[var(--color-border)] transition-colors last:border-0',
+          !renaming && 'cursor-pointer hover:bg-[var(--color-bg-subtle)]',
+        )}
+      >
+        {/* Name */}
+        <td className="px-4 py-3">
+          <div className="flex items-center gap-3">
+            <div className={cn(
+              'w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold border',
+              colors.bg, colors.text, colors.border,
+            )}>
+              {initial}
+            </div>
+            {renaming ? (
+              <RenameField user={user} onDone={() => setRenaming(false)} />
+            ) : (
+              <span className={cn('text-sm font-medium truncate', colors.text)}>
+                {user.displayName || user.name}
+              </span>
+            )}
+          </div>
+        </td>
+
+        {/* Username */}
+        <td className="px-4 py-3">
+          <span className="text-sm text-[var(--color-text-muted)] font-mono">{user.name}</span>
+        </td>
+
+        {/* Nodes */}
+        <td className="px-4 py-3">
+          {nodeCountLoading
+            ? <Skeleton className="w-6 h-4" />
+            : <span className="text-sm text-[var(--color-text-secondary)]">{nodeCount}</span>
+          }
+        </td>
+
+        {/* Created */}
+        <td className="px-4 py-3">
+          <span
+            className="text-sm text-[var(--color-text-muted)]"
+            title={new Date(user.createdAt).toLocaleString()}
+          >
+            {formatRelativeTime(user.createdAt)}
+          </span>
+        </td>
+
+        {/* Actions */}
+        <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center justify-end gap-1">
+            <button
+              onClick={() => setRenaming(true)}
+              title="Rename"
+              className="p-1.5 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-elevated)] transition-colors"
+            >
+              <Pencil size={14} />
+            </button>
+            <button
+              onClick={() => {
+                if (nodeCount > 0) {
+                  toast.error(`Cannot delete: move or delete this user's ${nodeCount} ${nodeCount === 1 ? 'node' : 'nodes'} first`)
+                  return
+                }
+                setDeleteOpen(true)
+              }}
+              title="Delete"
+              className="p-1.5 rounded-lg text-[var(--color-text-muted)] hover:text-red-400 hover:bg-red-400/10 transition-colors"
+            >
+              <Trash2 size={14} />
+            </button>
+          </div>
+        </td>
+      </tr>
+
+      <ConfirmDialog
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        onConfirm={() => deleteMutation.mutateAsync()}
+        title={`Delete user "${user.name}"?`}
+        description="This action cannot be undone. The user and all associated pre-auth keys will be permanently removed."
+        confirmLabel="Delete User"
+        variant="danger"
+        requireTyping={user.name}
+        loading={deleteMutation.isPending}
+      />
+    </>
+  )
+}
+
 // ── Skeleton cards ──────────────────────────────────────────────────────────
 
 function SkeletonCard() {
@@ -440,6 +549,7 @@ function SkeletonCard() {
 
 export function UsersPage() {
   const [createOpen, setCreateOpen] = useState(false)
+  const { usersView, setUsersView } = useUIStore()
 
   const { data: usersData, isLoading } = useQuery({
     queryKey: ['users'],
@@ -454,7 +564,6 @@ export function UsersPage() {
     queries: users.map((user) => ({
       queryKey: ['nodes', 'by-user', user.name],
       queryFn: () => nodesApi.list(user.name),
-      // Stale time to avoid hammering the API on every keystroke
       staleTime: 30_000,
       refetchInterval: 60_000,
     })),
@@ -476,22 +585,69 @@ export function UsersPage() {
         title="Users"
         description="Manage users and namespaces"
         action={
-          <button
-            onClick={() => setCreateOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] text-white rounded-lg transition-colors"
-          >
-            <Plus size={15} />
-            New User
-          </button>
+          <div className="flex items-center gap-2">
+            {/* View toggle */}
+            <div className="flex items-center border border-[var(--color-border)] rounded-lg overflow-hidden">
+              <button
+                onClick={() => setUsersView('grid')}
+                title="Grid view"
+                className={cn(
+                  'p-2 transition-colors',
+                  usersView === 'grid'
+                    ? 'bg-[var(--color-accent)] text-white'
+                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-elevated)]',
+                )}
+              >
+                <LayoutGrid size={15} />
+              </button>
+              <button
+                onClick={() => setUsersView('table')}
+                title="Table view"
+                className={cn(
+                  'p-2 transition-colors',
+                  usersView === 'table'
+                    ? 'bg-[var(--color-accent)] text-white'
+                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-elevated)]',
+                )}
+              >
+                <LayoutList size={15} />
+              </button>
+            </div>
+
+            <button
+              onClick={() => setCreateOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] text-white rounded-lg transition-colors"
+            >
+              <Plus size={15} />
+              New User
+            </button>
+          </div>
         }
       />
 
       {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <SkeletonCard />
-          <SkeletonCard />
-          <SkeletonCard />
-        </div>
+        usersView === 'table' ? (
+          <div className="bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-xl overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="border-b border-[var(--color-border)]">
+                <tr>
+                  {['User', 'Username', 'Nodes', 'Created', ''].map((h) => (
+                    <th key={h} className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {Array.from({ length: 4 }).map((_, i) => <SkeletonRow key={i} cols={5} />)}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+          </div>
+        )
       ) : users.length === 0 ? (
         <EmptyState
           icon={Users}
@@ -507,6 +663,30 @@ export function UsersPage() {
             </button>
           }
         />
+      ) : usersView === 'table' ? (
+        <div className="bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-xl overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="border-b border-[var(--color-border)]">
+              <tr>
+                <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">User</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">Username</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">Nodes</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">Created</th>
+                <th className="px-4 py-3 w-20" />
+              </tr>
+            </thead>
+            <tbody>
+              {users.map((user, idx) => (
+                <UserTableRow
+                  key={user.id}
+                  user={user}
+                  nodeCount={getNodeCount(idx)}
+                  nodeCountLoading={getNodeCountLoading(idx)}
+                />
+              ))}
+            </tbody>
+          </table>
+        </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {users.map((user, idx) => (

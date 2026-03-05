@@ -1,5 +1,6 @@
+import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Route, ExternalLink, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
+import { Route, ExternalLink, CheckCircle, XCircle, AlertCircle, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
 import { toast } from 'sonner'
 import { nodesApi } from '@/api/nodes'
 import type { HeadscaleNode } from '@/api/types'
@@ -8,6 +9,16 @@ import { Badge } from '@/components/shared/StatusBadge'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { SkeletonRow } from '@/components/shared/SkeletonRow'
 import { cn } from '@/lib/utils'
+
+type RouteSortField = 'cidr' | 'node' | 'user' | 'status'
+type SortDir = 'asc' | 'desc'
+
+function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
+  if (!active) return <ChevronsUpDown size={13} className="text-[var(--color-text-disabled)]" />
+  return dir === 'asc'
+    ? <ChevronUp size={13} className="text-[var(--color-accent)]" />
+    : <ChevronDown size={13} className="text-[var(--color-accent)]" />
+}
 
 // In v0.28.0, routes are string[] fields on the node object:
 //   availableRoutes — CIDRs the node is advertising
@@ -69,6 +80,17 @@ function RouteStatusBadge({ route }: { route: FlatRoute }) {
 
 export function RoutesPage() {
   const queryClient = useQueryClient()
+  const [sortField, setSortField] = useState<RouteSortField>('status')
+  const [sortDir, setSortDir] = useState<SortDir>('asc')
+
+  function toggleSort(field: RouteSortField) {
+    if (sortField === field) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortField(field)
+      setSortDir('asc')
+    }
+  }
 
   const { data, isLoading } = useQuery({
     queryKey: ['nodes'],
@@ -82,6 +104,17 @@ export function RoutesPage() {
   const subnetRoutes = allRoutes.filter(r => !r.isExitNode)
   const exitRoutes   = allRoutes.filter(r => r.isExitNode)
   const pendingCount = subnetRoutes.filter(r => routeStatus(r) === 'pending').length
+
+  const statusOrder = { pending: 0, approved: 1, disabled: 2 }
+
+  const sortedSubnetRoutes = [...subnetRoutes].sort((a, b) => {
+    let cmp = 0
+    if (sortField === 'cidr')   cmp = a.cidr.localeCompare(b.cidr)
+    else if (sortField === 'node')   cmp = (a.node.givenName || a.node.name).localeCompare(b.node.givenName || b.node.name)
+    else if (sortField === 'user')   cmp = a.node.user.name.localeCompare(b.node.user.name)
+    else cmp = (statusOrder[routeStatus(a)] ?? 3) - (statusOrder[routeStatus(b)] ?? 3)
+    return sortDir === 'asc' ? cmp : -cmp
+  })
 
   const approveMutation = useMutation({
     mutationFn: async ({ node, cidr, approve }: { node: HeadscaleNode; cidr: string; approve: boolean }) => {
@@ -126,12 +159,19 @@ export function RoutesPage() {
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-[var(--color-border)] text-xs text-[var(--color-text-muted)] uppercase tracking-wider">
-                <th className="text-left px-5 py-3 font-medium">Route</th>
-                <th className="text-left px-5 py-3 font-medium">Node</th>
-                <th className="text-left px-5 py-3 font-medium">User</th>
-                <th className="text-left px-5 py-3 font-medium">Status</th>
-                <th className="text-right px-5 py-3 font-medium">Action</th>
+              <tr className="border-b border-[var(--color-border)]">
+                {(['cidr', 'node', 'user', 'status'] as RouteSortField[]).map((field) => (
+                  <th key={field} className="text-left px-5 py-3">
+                    <button
+                      onClick={() => toggleSort(field)}
+                      className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] transition-colors select-none"
+                    >
+                      {field === 'cidr' ? 'Route' : field.charAt(0).toUpperCase() + field.slice(1)}
+                      <SortIcon active={sortField === field} dir={sortDir} />
+                    </button>
+                  </th>
+                ))}
+                <th className="text-right px-5 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -148,13 +188,7 @@ export function RoutesPage() {
                   </td>
                 </tr>
               ) : (
-                subnetRoutes
-                  .sort((a, b) => {
-                    // Pending first
-                    const order = { pending: 0, approved: 1, disabled: 2 }
-                    return order[routeStatus(a)] - order[routeStatus(b)]
-                  })
-                  .map((route, i) => {
+                sortedSubnetRoutes.map((route, i) => {
                     const status = routeStatus(route)
                     return (
                       <tr

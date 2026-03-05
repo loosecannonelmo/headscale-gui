@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils'
 
-type NodeStatus = 'online' | 'recent' | 'offline' | 'ephemeral'
+type NodeStatus = 'online' | 'recent' | 'offline' | 'ephemeral' | 'expired'
 type KeyStatus = 'active' | 'expiring-soon' | 'expired' | 'used'
 type RouteStatus = 'approved' | 'pending' | 'disabled'
 
@@ -9,6 +9,7 @@ const nodeStatusConfig: Record<NodeStatus, { label: string; dot: string; text: s
   recent:    { label: 'Recent',    dot: 'bg-amber-400',  text: 'text-amber-400' },
   offline:   { label: 'Offline',   dot: 'bg-red-400',    text: 'text-red-400' },
   ephemeral: { label: 'Ephemeral', dot: 'bg-purple-400', text: 'text-purple-400' },
+  expired:   { label: 'Expired',   dot: 'bg-[var(--color-text-disabled)]', text: 'text-[var(--color-text-muted)]' },
 }
 
 const keyStatusConfig: Record<KeyStatus, { label: string; dot: string; text: string }> = {

@@ -27,7 +27,7 @@ import { useRelativeTime } from '@/hooks/useRelativeTime'
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
-type SortField = 'name' | 'lastSeen'
+type SortField = 'name' | 'lastSeen' | 'status' | 'user'
 type SortDir = 'asc' | 'desc'
 type StatusFilter = 'all' | 'online' | 'offline' | 'expired'
 
@@ -351,8 +351,7 @@ function NodeRow({
   onCancelRename: () => void
 }) {
   const lastSeenText = useRelativeTime(node.lastSeen)
-  const rawStatus = getNodeStatus(node.online, node.lastSeen)
-  const status = node.isExpired ? 'offline' : rawStatus
+  const status = node.isExpired ? 'expired' : getNodeStatus(node.online, node.lastSeen)
   const ipv4 = node.ipAddresses.find(ip => ip.startsWith('100.')) ?? node.ipAddresses[0]
   const ipv6 = node.ipAddresses.find(ip => !ip.startsWith('100.'))
 
@@ -364,6 +363,7 @@ function NodeRow({
         isSelected
           ? 'bg-[var(--color-accent-subtle)]'
           : 'hover:bg-[var(--color-bg-subtle)]',
+        node.isExpired && 'opacity-60',
       )}
       style={{ height: 52 }}
     >
@@ -527,6 +527,13 @@ export function NodesPage() {
       let cmp = 0
       if (sortField === 'name') {
         cmp = getNodeDisplayName(a).localeCompare(getNodeDisplayName(b))
+      } else if (sortField === 'user') {
+        cmp = a.user.name.localeCompare(b.user.name)
+      } else if (sortField === 'status') {
+        const order = { online: 0, recent: 1, offline: 2, ephemeral: 3, expired: 4 }
+        const sa = a.isExpired ? 'expired' : getNodeStatus(a.online, a.lastSeen)
+        const sb = b.isExpired ? 'expired' : getNodeStatus(b.online, b.lastSeen)
+        cmp = (order[sa] ?? 5) - (order[sb] ?? 5)
       } else {
         cmp = new Date(a.lastSeen).getTime() - new Date(b.lastSeen).getTime()
       }
@@ -632,11 +639,23 @@ export function NodesPage() {
                     <SortIcon field="name" current={sortField} dir={sortDir} />
                   </button>
                 </th>
-                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
-                  Status
+                <th className="px-4 py-3 text-left">
+                  <button
+                    onClick={() => toggleSort('status')}
+                    className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] transition-colors select-none"
+                  >
+                    Status
+                    <SortIcon field="status" current={sortField} dir={sortDir} />
+                  </button>
                 </th>
-                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
-                  User
+                <th className="px-4 py-3 text-left">
+                  <button
+                    onClick={() => toggleSort('user')}
+                    className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] transition-colors select-none"
+                  >
+                    User
+                    <SortIcon field="user" current={sortField} dir={sortDir} />
+                  </button>
                 </th>
                 <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
                   IP Addresses
