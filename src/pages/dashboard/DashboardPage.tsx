@@ -32,15 +32,13 @@ export function DashboardPage() {
     refetchInterval: 30_000,
   })
 
-  // Fan out pre-auth keys per user
-  const userNames = usersData?.users.map(u => u.name) ?? []
+  // v0.28.0: global list returns all users' keys; no fan-out needed
   const { data: allKeys } = useQuery({
-    queryKey: ['all-preauth-keys', userNames],
+    queryKey: ['preauth-keys'],
     queryFn: async () => {
-      const results = await Promise.allSettled(userNames.map(u => preAuthKeysApi.listForUser(u)))
-      return results.flatMap(r => r.status === 'fulfilled' ? r.value.preAuthKeys : [])
+      const result = await preAuthKeysApi.list()
+      return result.preAuthKeys
     },
-    enabled: userNames.length > 0,
     refetchInterval: 60_000,
   })
 

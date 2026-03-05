@@ -6,7 +6,10 @@ import type {
 } from './types'
 
 export const preAuthKeysApi = {
-  // Must fetch per-user — no global listing endpoint
+  // v0.28.0: global list returns all users' keys; ?user= param is ignored
+  list: (): Promise<ListPreAuthKeysResponse> =>
+    api.get('/preauthkey'),
+
   listForUser: (user: string): Promise<ListPreAuthKeysResponse> =>
     api.get(`/preauthkey?user=${encodeURIComponent(user)}`),
 

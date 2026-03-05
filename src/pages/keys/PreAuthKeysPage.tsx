@@ -540,22 +540,21 @@ export function PreAuthKeysPage() {
   const users = usersData?.users ?? []
   const userNames = users.map(u => u.name)
 
-  // 2. Fan-out per user, aggregate
+  // 2. Fetch all keys — v0.28.0 returns all users' keys from global endpoint
   const {
     data: allKeys,
     isLoading: keysLoading,
   } = useQuery({
-    queryKey: ['preauth-keys', userNames],
+    queryKey: ['preauth-keys'],
     queryFn: async () => {
-      const results = await Promise.allSettled(userNames.map(u => preAuthKeysApi.listForUser(u)))
-      return results.flatMap(r => r.status === 'fulfilled' ? r.value.preAuthKeys : [])
+      const result = await preAuthKeysApi.list()
+      return result.preAuthKeys
     },
-    enabled: userNames.length > 0,
     refetchInterval: 30_000,
   })
 
   const keys = allKeys ?? []
-  const isLoading = usersLoading || (keysLoading && keys.length === 0)
+  const isLoading = usersLoading || keysLoading
 
   // Mutations
   const expireMutation = useMutation({
