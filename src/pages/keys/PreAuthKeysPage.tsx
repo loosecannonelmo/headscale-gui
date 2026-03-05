@@ -559,8 +559,7 @@ export function PreAuthKeysPage() {
 
   // Mutations
   const expireMutation = useMutation({
-    mutationFn: ({ user, key }: { user: string; key: string }) =>
-      preAuthKeysApi.expire(user, key),
+    mutationFn: (id: string) => preAuthKeysApi.expire(id),
     onSuccess: () => {
       toast.success('Key expired')
       queryClient.invalidateQueries({ queryKey: ['preauth-keys'] })
@@ -570,8 +569,7 @@ export function PreAuthKeysPage() {
   })
 
   const deleteMutation = useMutation({
-    mutationFn: ({ user, key }: { user: string; key: string }) =>
-      preAuthKeysApi.delete(user, key),
+    mutationFn: (id: string) => preAuthKeysApi.delete(id),
     onSuccess: () => {
       toast.success('Key deleted')
       queryClient.invalidateQueries({ queryKey: ['preauth-keys'] })
@@ -845,7 +843,7 @@ export function PreAuthKeysPage() {
         open={expireTarget !== null}
         onClose={() => setExpireTarget(null)}
         onConfirm={() => {
-          if (expireTarget) expireMutation.mutate({ user: expireTarget.user.id, key: expireTarget.key })
+          if (expireTarget) expireMutation.mutate(expireTarget.id)
         }}
         title="Expire pre-auth key?"
         description={`This key will immediately become invalid and cannot be used to register new nodes. This action cannot be undone.`}
@@ -859,7 +857,7 @@ export function PreAuthKeysPage() {
         open={deleteTarget !== null}
         onClose={() => setDeleteTarget(null)}
         onConfirm={() => {
-          if (deleteTarget) deleteMutation.mutate({ user: deleteTarget.user.id, key: deleteTarget.key })
+          if (deleteTarget) deleteMutation.mutate(deleteTarget.id)
         }}
         title="Delete pre-auth key?"
         description={`The key ${truncateKey(deleteTarget?.key ?? '', 16)} will be permanently removed.`}

@@ -13,11 +13,12 @@ export const preAuthKeysApi = {
   create: (req: CreatePreAuthKeyRequest): Promise<{ preAuthKey: HeadscalePreAuthKey }> =>
     api.post('/preauthkey', req),
 
-  expire: (user: string, key: string): Promise<void> =>
-    api.post('/preauthkey/expire', { user, key }),
+  // v0.28.0: expire/delete now take the key's id (uint64), not user+key string
+  expire: (id: string): Promise<void> =>
+    api.post('/preauthkey/expire', { id }),
 
-  delete: (user: string, key: string): Promise<void> =>
-    api.delete('/preauthkey', { user, key }),
+  delete: (id: string): Promise<void> =>
+    api.delete(`/preauthkey?id=${encodeURIComponent(id)}`),
 }
 
 export const apiKeysApi = {
@@ -28,10 +29,11 @@ export const apiKeysApi = {
     api.post('/apikey', { expiration } satisfies CreateApiKeyRequest),
 
   expire: (prefix: string): Promise<void> =>
-    api.post('/apikey/expire', { prefix }),
+    api.post('/apikey/expire', { prefix: prefix.replace(/\*+$/, '') }),
 
+  // v0.28.0: list response masks prefix as "hskey-api-XXXX-***" — strip *** before URL
   delete: (prefix: string): Promise<void> =>
-    api.delete(`/apikey/${prefix}`),
+    api.delete(`/apikey/${prefix.replace(/\*+$/, '')}`),
 }
 
 export function getPreAuthKeyStatus(key: HeadscalePreAuthKey): 'active' | 'expiring-soon' | 'expired' | 'used' {
